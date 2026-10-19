@@ -264,14 +264,44 @@
   }
 
   /* ── Three-card spread ───────────────────────────────────────────── */
+  const THREE_KEY = "solabusca.three.v1";
   const threeDeck = $("#three-deck");
   const threeTableau = $("#three-tableau");
   const threeSlots = $$("[data-pos]").map((el) => ({ pos: el.dataset.pos, el }));
   const threeBtn = $("#three-draw");
   const threeReveal = $("#three-reveal");
+  const threeLock = $("#three-lock");
+  const threeCountdown = $("#three-countdown");
   const threeReading = $("#three-reading");
   let spread = null; // [{card, reversed, revealed}]
   let busy = false;
+  let threeCountdownTimer = null;
+
+  function loadThree() {
+    try {
+      const raw = localStorage.getItem(THREE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (data.date !== todayKey()) return null;
+      if (!Array.isArray(data.cards) || data.cards.length !== threeSlots.length) return null;
+      return data;
+    } catch { return null; }
+  }
+
+  function saveThree() {
+    if (!spread) return;
+    localStorage.setItem(THREE_KEY, JSON.stringify({
+      date: todayKey(), ts: Date.now(),
+      cards: spread.map((s) => ({ id: s.card.id, reversed: s.reversed, revealed: s.revealed }))
+    }));
+  }
+
+  function startThreeCountdown() {
+    if (threeCountdownTimer) clearInterval(threeCountdownTimer);
+    const tick = () => { threeCountdown.textContent = formatCountdown(msUntilMidnight()); };
+    tick();
+    threeCountdownTimer = setInterval(tick, 1000);
+  }
 
   function synthesisBlock(cards3) {
     const [p, pr, f] = cards3;
@@ -313,8 +343,39 @@
     if (!item || item.revealed) return;
     item.revealed = true;
     await flipCard(item.el);
+    saveThree();
     renderThreeReadings();
     if (spread.every((s) => s.revealed)) threeReveal.hidden = true;
+  }
+
+  function restoreThree(data) {
+    threeTableau.classList.add("has-card");
+    threeDeck.classList.add("dealt");
+    spread = threeSlots.map(({ pos, el }, i) => {
+      const saved = data.cards[i];
+      const card = CARDS[saved.id];
+      const cardEl = dealInto(el, card, saved.reversed, null);
+      if (saved.revealed) {
+        cardEl.classList.add("flipped");
+        cardEl.removeAttribute("tabindex");
+        cardEl.removeAttribute("role");
+      } else {
+        const hint = document.createElement("span");
+        hint.className = "tap-hint";
+        hint.textContent = "tap to reveal";
+        el.appendChild(hint);
+        cardEl.addEventListener("click", () => revealSpreadCard(i));
+        cardEl.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); revealSpreadCard(i); }
+        });
+      }
+      return { pos, card, reversed: saved.reversed, el: cardEl, revealed: !!saved.revealed };
+    });
+    renderThreeReadings();
+    threeBtn.hidden = true;
+    threeReveal.hidden = spread.every((s) => s.revealed);
+    threeLock.hidden = false;
+    startThreeCountdown();
   }
 
   async function threeDraw() {
@@ -347,8 +408,11 @@
     await sleep(300);
     threeTableau.classList.add("has-card");
     threeReveal.hidden = false;
+    saveThree();
     threeBtn.disabled = false;
-    threeBtn.textContent = "Cast Again";
+    threeBtn.hidden = true;
+    threeLock.hidden = false;
+    startThreeCountdown();
     busy = false;
   }
 
@@ -365,6 +429,28 @@
       threeReveal.disabled = false;
       busy = false;
     });
+    const saved = loadThree();
+    if (saved) restoreThree(saved);
+  }
+
+  // midnight rollover while the app stays open
+  function checkThreeRollover() {
+    const raw = localStorage.getItem(THREE_KEY);
+    if (!raw) return;
+    try {
+      if (JSON.parse(raw).date !== todayKey()) {
+        clearInterval(threeCountdownTimer);
+        threeReading.innerHTML = "";
+        clearSlots(threeSlots.map((s) => s.el));
+        threeTableau.classList.remove("has-card");
+        threeDeck.classList.remove("dealt");
+        threeReveal.hidden = true;
+        threeBtn.hidden = false;
+        threeBtn.disabled = false;
+        threeLock.hidden = true;
+        spread = null;
+      }
+    } catch { /* corrupted entry: ignore */ }
   }
 
   /* ── Yes / No ────────────────────────────────────────────────────── */
@@ -519,10 +605,15 @@
   initYesNo();
   initInstall();
 
+  function checkRollovers() {
+    checkDailyRollover();
+    checkThreeRollover();
+  }
+
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) checkDailyRollover();
+    if (!document.hidden) checkRollovers();
   });
-  setInterval(checkDailyRollover, 20000);
+  setInterval(checkRollovers, 20000);
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {

@@ -73,7 +73,7 @@
 
     <!-- ══ THREE CARDS ══ -->
     <section class="panel" id="panel-three" role="tabpanel" aria-labelledby="tab-three" hidden>
-      <p class="panel-intro">Past &middot; Present &middot; Future. The story the cards tell across time.</p>
+      <p class="panel-intro">Past &middot; Present &middot; Future. Cast once — it holds until midnight.</p>
       <div class="tableau spread-three" id="three-tableau">
         <div class="deck-zone">
           <div class="deck" id="three-deck" aria-hidden="true">
@@ -89,6 +89,10 @@
       <div class="controls">
         <button class="cta" id="three-draw">Cast the Spread</button>
         <button class="cta ghost" id="three-reveal" hidden>Reveal All</button>
+        <p class="lock-note" id="three-lock" hidden>
+          Your spread is cast for today.<br>
+          It reshuffles at midnight — <span id="three-countdown"></span>
+        </p>
       </div>
       <div class="reading" id="three-reading" aria-live="polite"></div>
     </section>
