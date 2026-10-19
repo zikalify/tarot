@@ -541,7 +541,7 @@
 
     let installed = false;
     const hide = () => { btn.hidden = true; note.hidden = true; };
-    const markInstalled = () => { installed = true; hide(); };
+    let markInstalled = () => { installed = true; hide(); };
 
     const displayMode = [
       "(display-mode: standalone)",
@@ -587,9 +587,11 @@
     // Scope-collision fallback: on mobile Chrome, if beforeinstallprompt never fires
     // after ~5 s, Chrome likely thinks this is already installed due to a sibling
     // PWA on the same origin with a broad scope. Tell the user how to fix it.
+    let fallbackTimer = null;
     const isAndroid = /android/i.test(ua);
     if (!isIOS && isAndroid && !isStandalone()) {
-      setTimeout(() => {
+      fallbackTimer = setTimeout(() => {
+        if (installed) return; // already installed — don't show confusing note
         if (!deferred && btn.hidden) {
           label.textContent = "Already installed?";
           note.textContent = "Chrome thinks this app is already installed (another site on this domain may own the install slot). Fix: open <strong>chrome://apps</strong>, uninstall any “Sola Busca” or related apps, then reload this page.";
@@ -598,6 +600,13 @@
         }
       }, 5000);
     }
+
+    // clear the fallback timer once we know the app is installed
+    const baseMarkInstalled = markInstalled;
+    markInstalled = function () {
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      baseMarkInstalled();
+    };
 
     btn.addEventListener("click", async () => {
       if (deferred) {
