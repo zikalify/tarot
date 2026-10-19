@@ -539,8 +539,10 @@
     const note = $("#install-note");
     if (!btn) return;
 
+    let installed = false;
     const hide = () => { btn.hidden = true; note.hidden = true; };
     const markInstalled = () => {
+      installed = true;
       try { localStorage.setItem("solabusca.installed", "1"); } catch { /* ignore */ }
       hide();
     };
@@ -582,6 +584,7 @@
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       deferred = e;
+      if (installed) return; // already installed — never re-offer
       label.textContent = "Install App";
       btn.hidden = false;
     });

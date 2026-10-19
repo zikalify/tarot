@@ -1,5 +1,5 @@
 /* Sola Busca Tarot PWA — service worker */
-const CACHE = "solabusca-v5";
+const CACHE = "solabusca-v6";
 
 const PRECACHE = [
   ".",
