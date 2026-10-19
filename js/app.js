@@ -584,6 +584,21 @@
       btn.hidden = false;
     }
 
+    // Scope-collision fallback: on mobile Chrome, if beforeinstallprompt never fires
+    // after ~5 s, Chrome likely thinks this is already installed due to a sibling
+    // PWA on the same origin with a broad scope. Tell the user how to fix it.
+    const isAndroid = /android/i.test(ua);
+    if (!isIOS && isAndroid && !isStandalone()) {
+      setTimeout(() => {
+        if (!deferred && btn.hidden) {
+          label.textContent = "Already installed?";
+          note.textContent = "Chrome thinks this app is already installed (another site on this domain may own the install slot). Fix: open <strong>chrome://apps</strong>, uninstall any “Sola Busca” or related apps, then reload this page.";
+          note.hidden = false;
+          btn.hidden = true;
+        }
+      }, 5000);
+    }
+
     btn.addEventListener("click", async () => {
       if (deferred) {
         deferred.prompt();
