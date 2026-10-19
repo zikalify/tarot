@@ -541,11 +541,7 @@
 
     let installed = false;
     const hide = () => { btn.hidden = true; note.hidden = true; };
-    const markInstalled = () => {
-      installed = true;
-      try { localStorage.setItem("solabusca.installed", "1"); } catch { /* ignore */ }
-      hide();
-    };
+    const markInstalled = () => { installed = true; hide(); };
 
     const displayMode = [
       "(display-mode: standalone)",
@@ -555,10 +551,8 @@
     const isStandalone = () =>
       window.navigator.standalone === true || displayMode.some((m) => m.matches);
 
-    // already running as the installed app (or previously installed) — offer nothing
-    let knownInstalled = false;
-    try { knownInstalled = localStorage.getItem("solabusca.installed") === "1"; } catch { /* ignore */ }
-    if (isStandalone() || knownInstalled) return;
+    // already running as the installed app — offer nothing
+    if (isStandalone()) return;
 
     const ua = navigator.userAgent;
     const isIOS =
@@ -573,13 +567,6 @@
         m.addEventListener("change", () => { if (m.matches) markInstalled(); });
       }
     });
-
-    // Chrome/Android can tell us when a related installed app already exists
-    if (navigator.getInstalledRelatedApps) {
-      navigator.getInstalledRelatedApps()
-        .then((apps) => { if (apps && apps.length) markInstalled(); })
-        .catch(() => {});
-    }
 
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
