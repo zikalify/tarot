@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Daily tarot readings drawn from the Sola Busca tarot (Venice, c. 1491) — the earliest fully extant 78-card deck, in the public domain.">
+  <meta name="theme-color" content="#14100c">
+  <title>Sola Busca · Tarocchi MDXCII</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="veil" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="sigil" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="42" height="42">
+        <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="32" cy="32" r="24" fill="none" stroke="currentColor" stroke-width=".6"/>
+        <path d="M32 8 L36 28 L56 32 L36 36 L32 56 L28 36 L8 32 L28 28 Z" fill="currentColor" opacity=".85"/>
+        <circle cx="32" cy="32" r="4" fill="#14100c" stroke="currentColor" stroke-width="1"/>
+      </svg>
+    </div>
+    <h1>Sola Busca</h1>
+    <p class="subtitle">Tarocchi &middot; Venezia, c. MDXCI</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Reading types">
+    <button class="tab active" role="tab" aria-selected="true" aria-controls="panel-daily" id="tab-daily" data-tab="daily">
+      <span class="tab-roman">I</span> Daily Card
+    </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-three" id="tab-three" data-tab="three">
+      <span class="tab-roman">II</span> Three Cards
+    </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-yesno" id="tab-yesno" data-tab="yesno">
+      <span class="tab-roman">III</span> Yes or No
+    </button>
+  </nav>
+
+  <main>
+    <!-- ══ DAILY ══ -->
+    <section class="panel active" id="panel-daily" role="tabpanel" aria-labelledby="tab-daily">
+      <p class="panel-intro">One card for the day. Drawn once — it holds until midnight.</p>
+      <div class="tableau" id="daily-tableau">
+        <div class="deck-zone">
+          <div class="deck" id="daily-deck" aria-hidden="true">
+            <div class="deck-card"></div><div class="deck-card"></div><div class="deck-card"></div>
+          </div>
+        </div>
+        <div class="slot single" id="daily-slot"></div>
+      </div>
+      <div class="controls">
+        <button class="cta" id="daily-draw">Draw Today's Card</button>
+        <p class="lock-note" id="daily-lock" hidden>
+          Your card is drawn for today.<br>
+          The deck reshuffles at midnight — <span id="daily-countdown"></span>
+        </p>
+      </div>
+      <div class="reading" id="daily-reading" aria-live="polite"></div>
+    </section>
+
+    <!-- ══ THREE CARDS ══ -->
+    <section class="panel" id="panel-three" role="tabpanel" aria-labelledby="tab-three" hidden>
+      <p class="panel-intro">Past &middot; Present &middot; Future. The story the cards tell across time.</p>
+      <div class="tableau spread-three" id="three-tableau">
+        <div class="deck-zone">
+          <div class="deck" id="three-deck" aria-hidden="true">
+            <div class="deck-card"></div><div class="deck-card"></div><div class="deck-card"></div>
+          </div>
+        </div>
+        <div class="slots three-slots">
+          <div class="slot-wrap"><div class="slot" data-pos="past"></div><span class="slot-label">Past</span></div>
+          <div class="slot-wrap"><div class="slot" data-pos="present"></div><span class="slot-label">Present</span></div>
+          <div class="slot-wrap"><div class="slot" data-pos="future"></div><span class="slot-label">Future</span></div>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="cta" id="three-draw">Cast the Spread</button>
+        <button class="cta ghost" id="three-reveal" hidden>Reveal All</button>
+      </div>
+      <div class="reading" id="three-reading" aria-live="polite"></div>
+    </section>
+
+    <!-- ══ YES / NO ══ -->
+    <section class="panel" id="panel-yesno" role="tabpanel" aria-labelledby="tab-yesno" hidden>
+      <p class="panel-intro">Hold your question in mind. Draw as often as you need — the oracle never tires.</p>
+      <div class="question-row">
+        <input type="text" id="yesno-question" placeholder="Hold a question in mind&hellip;" maxlength="140" autocomplete="off">
+      </div>
+      <div class="tableau" id="yesno-tableau">
+        <div class="deck-zone">
+          <div class="deck" id="yesno-deck" aria-hidden="true">
+            <div class="deck-card"></div><div class="deck-card"></div><div class="deck-card"></div>
+          </div>
+        </div>
+        <div class="slot single" id="yesno-slot"></div>
+      </div>
+      <div class="controls">
+        <button class="cta" id="yesno-draw">Ask the Cards</button>
+      </div>
+      <div class="reading" id="yesno-reading" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      Artwork: <em>Sola Busca tarot</em> (Venice, c. 1490&ndash;91) &mdash; the earliest fully extant
+      78-card tarot deck. Engraved anonymously; hand-painted set held by the
+      Pinacoteca di Brera, Milan. Scans via Wikimedia Commons.
+      <strong>Public domain.</strong>
+    </p>
+  </footer>
+
+  <script src="js/cards.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
