@@ -539,18 +539,45 @@
     const note = $("#install-note");
     if (!btn) return;
 
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      window.navigator.standalone === true;
-    if (standalone) return; // already installed — nothing to offer
+    const hide = () => { btn.hidden = true; note.hidden = true; };
+    const markInstalled = () => {
+      try { localStorage.setItem("solabusca.installed", "1"); } catch { /* ignore */ }
+      hide();
+    };
+
+    const displayMode = [
+      "(display-mode: standalone)",
+      "(display-mode: minimal-ui)",
+      "(display-mode: window-controls-overlay)",
+    ].map((q) => window.matchMedia(q));
+    const isStandalone = () =>
+      window.navigator.standalone === true || displayMode.some((m) => m.matches);
+
+    // already running as the installed app (or previously installed) — offer nothing
+    let knownInstalled = false;
+    try { knownInstalled = localStorage.getItem("solabusca.installed") === "1"; } catch { /* ignore */ }
+    if (isStandalone() || knownInstalled) return;
 
     const ua = navigator.userAgent;
     const isIOS =
       /iphone|ipad|ipod/i.test(ua) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(ua);
 
     let deferred = null;
+
+    // if the app is launched or switched into standalone, it's installed — hide
+    displayMode.forEach((m) => {
+      if (typeof m.addEventListener === "function") {
+        m.addEventListener("change", () => { if (m.matches) markInstalled(); });
+      }
+    });
+
+    // Chrome/Android can tell us when a related installed app already exists
+    if (navigator.getInstalledRelatedApps) {
+      navigator.getInstalledRelatedApps()
+        .then((apps) => { if (apps && apps.length) markInstalled(); })
+        .catch(() => {});
+    }
 
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
@@ -559,23 +586,12 @@
       btn.hidden = false;
     });
 
-    window.addEventListener("appinstalled", () => {
-      btn.hidden = true;
-      note.hidden = true;
-      deferred = null;
-    });
+    window.addEventListener("appinstalled", markInstalled);
 
+    // iOS never fires beforeinstallprompt and has no install API — show manual steps
     if (isIOS) {
       label.textContent = "Install on iOS";
       btn.hidden = false;
-    } else if (isMobile) {
-      // Firefox Android etc. don't fire beforeinstallprompt — offer instructions
-      setTimeout(() => {
-        if (!deferred) {
-          label.textContent = "Install App";
-          btn.hidden = false;
-        }
-      }, 2500);
     }
 
     btn.addEventListener("click", async () => {
@@ -583,10 +599,7 @@
         deferred.prompt();
         const choice = await deferred.userChoice;
         deferred = null;
-        if (choice.outcome === "accepted") {
-          btn.hidden = true;
-          note.hidden = true;
-        }
+        if (choice.outcome === "accepted") markInstalled();
         return;
       }
       if (isIOS) {
@@ -618,6 +631,15 @@
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+    // When an updated service worker takes control, reload once so the new
+    // assets are used immediately (otherwise the old cache serves this load).
+    let hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || reloading) return;
+      reloading = true;
+      window.location.reload();
     });
   }
 })();
