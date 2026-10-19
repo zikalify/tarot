@@ -446,11 +446,78 @@
     });
   }
 
+  /* ── Install prompt ──────────────────────────────────────────────── */
+  function initInstall() {
+    const btn = $("#install-btn");
+    const label = $("#install-label");
+    const note = $("#install-note");
+    if (!btn) return;
+
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true;
+    if (standalone) return; // already installed — nothing to offer
+
+    const ua = navigator.userAgent;
+    const isIOS =
+      /iphone|ipad|ipod/i.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(ua);
+
+    let deferred = null;
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferred = e;
+      label.textContent = "Install App";
+      btn.hidden = false;
+    });
+
+    window.addEventListener("appinstalled", () => {
+      btn.hidden = true;
+      note.hidden = true;
+      deferred = null;
+    });
+
+    if (isIOS) {
+      label.textContent = "Install on iOS";
+      btn.hidden = false;
+    } else if (isMobile) {
+      // Firefox Android etc. don't fire beforeinstallprompt — offer instructions
+      setTimeout(() => {
+        if (!deferred) {
+          label.textContent = "Install App";
+          btn.hidden = false;
+        }
+      }, 2500);
+    }
+
+    btn.addEventListener("click", async () => {
+      if (deferred) {
+        deferred.prompt();
+        const choice = await deferred.userChoice;
+        deferred = null;
+        if (choice.outcome === "accepted") {
+          btn.hidden = true;
+          note.hidden = true;
+        }
+        return;
+      }
+      if (isIOS) {
+        note.textContent = "Tap the Share button below, then choose “Add to Home Screen”.";
+      } else {
+        note.textContent = "Open your browser menu and choose “Install app” or “Add to Home screen”.";
+      }
+      note.hidden = false;
+    });
+  }
+
   /* ── Boot ────────────────────────────────────────────────────────── */
   initTabs();
   initDaily();
   initThree();
   initYesNo();
+  initInstall();
 
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) checkDailyRollover();

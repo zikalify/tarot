@@ -16,20 +16,36 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { height: 100%; }
+html {
+  min-height: 100%;
+  background-color: var(--bg);
+}
 
 body {
   min-height: 100%;
-  background:
-    radial-gradient(1200px 500px at 50% -10%, #2a2118 0%, transparent 60%),
-    radial-gradient(900px 700px at 85% 110%, #241a12 0%, transparent 55%),
-    var(--bg);
+  min-height: 100dvh;
+  background-color: var(--bg);
   color: var(--ink);
   font-family: var(--serif);
   font-size: 17px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+}
+
+/* Fixed atmospheric wash: anchored to the viewport instead of the (tall)
+   document so it never cuts off or seams when mobile content scrolls
+   past one screen. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px 500px at 50% -10%, #2a2118 0%, transparent 60%),
+    radial-gradient(900px 700px at 85% 110%, #241a12 0%, transparent 55%),
+    var(--bg);
 }
 
 /* faint drifting motes */
@@ -73,6 +89,37 @@ header, nav, main, footer { position: relative; z-index: 1; }
   font-size: 13px;
   text-transform: uppercase;
   margin-top: 4px;
+}
+
+/* ── Install button ─────────────────────────────────────────────── */
+.install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: rgba(201,162,39,.08);
+  border: 1px solid rgba(201,162,39,.5);
+  border-radius: 30px;
+  color: var(--gold-bright);
+  font-family: var(--serif);
+  font-size: 13px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .3s, box-shadow .3s, transform .15s;
+}
+.install-btn:hover { background: rgba(201,162,39,.18); box-shadow: 0 0 18px rgba(201,162,39,.3); }
+.install-btn:active { transform: scale(.97); }
+.install-btn svg { color: var(--gold); }
+.install-note {
+  max-width: 34ch;
+  margin: 10px auto 0;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink-dim);
+  line-height: 1.5;
+  animation: rise .45s ease both;
 }
 
 /* ── Tabs ───────────────────────────────────────────────────────── */
