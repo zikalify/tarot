@@ -1,5 +1,5 @@
 /* Sola Busca Tarot PWA — service worker */
-const CACHE = "solabusca-v12";
+const CACHE = "solabusca-v13";
 
 const PRECACHE = [
   ".",
@@ -107,11 +107,12 @@ self.addEventListener("activate", (event) => {
 });
 
 // Network-first so a newly deployed manifest/index is picked up immediately;
-// falls back to the cache when offline.
+// falls back to the cache when offline. `cache: "reload"` skips the HTTP cache
+// so Chrome never judges installability against a stale manifest.
 async function networkFirst(request) {
   const cache = await caches.open(CACHE);
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: "reload" });
     if (response && response.ok) cache.put(request, response.clone());
     return response;
   } catch (err) {

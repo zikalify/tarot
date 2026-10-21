@@ -17,7 +17,7 @@
   "related_applications": [
     {
       "platform": "webapp",
-      "url": "./manifest.webmanifest",
+      "url": "./manifest.webmanifest?v=2",
       "id": "https://zikalify.github.io/tarot/solabusca-tarot/"
     }
   ],

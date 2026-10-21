@@ -657,7 +657,15 @@
       if (isIOS) {
         note.textContent = "Tap the Share button, then choose “Add to Home Screen”.";
       } else {
-        note.textContent = "Open your browser menu and choose “Install app” or “Add to Home screen”.";
+        // No native prompt is available. The usual cause on this domain is
+        // another installed app whose scope covers this address, which makes
+        // Chrome refuse to install a second app here.
+        note.innerHTML =
+          "Chrome isn’t offering its install prompt for this page.<br>" +
+          "That happens when another app installed from this same domain already covers this address — " +
+          "the <strong>CrMS Tracker</strong> app is installed with a scope of <code>/</code>, which claims all of " +
+          "<code>zikalify.github.io</code>.<br>" +
+          "Uninstall it in Chrome’s app settings (<code>chrome://app-settings</code>), reload this page, and install again.";
       }
       note.hidden = false;
     });
