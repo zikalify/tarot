@@ -1,5 +1,5 @@
 /* Sola Busca Tarot PWA — service worker */
-const CACHE = "solabusca-v11";
+const CACHE = "solabusca-v12";
 
 const PRECACHE = [
   ".",
@@ -106,18 +106,39 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Network-first so a newly deployed manifest/index is picked up immediately;
+// falls back to the cache when offline.
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE);
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) cache.put(request, response.clone());
+    return response;
+  } catch (err) {
+    const cached = await cache.match(request, { ignoreSearch: true });
+    if (cached) return cached;
+    throw err;
+  }
+}
+
+// Cache-first for static assets (images, CSS, JS).
+async function cacheFirst(request) {
+  const cached = await caches.match(request, { ignoreSearch: true });
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok && new URL(request.url).origin === location.origin) {
+    const cache = await caches.open(CACHE);
+    cache.put(request, response.clone());
+  }
+  return response;
+}
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((resp) => {
-        if (resp.ok && new URL(event.request.url).origin === location.origin) {
-          const copy = resp.clone();
-          caches.open(CACHE).then((cache) => cache.put(event.request, copy));
-        }
-        return resp;
-      });
-    })
-  );
+
+  const url = new URL(event.request.url);
+  const isCore = event.request.mode === "navigate" ||
+    (url.origin === location.origin && url.pathname.endsWith("/manifest.webmanifest"));
+
+  event.respondWith(isCore ? networkFirst(event.request) : cacheFirst(event.request));
 });

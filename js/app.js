@@ -567,8 +567,16 @@
       btn.hidden = false;
     };
 
-    // Already running as the installed app — offer nothing.
-    if (isStandalone()) { hide(); return; }
+    const INSTALLED_KEY = "solabusca.installed.v1";
+    const readInstalledFlag = () => {
+      try { return localStorage.getItem(INSTALLED_KEY) === "1"; } catch { return false; }
+    };
+    const writeInstalledFlag = (on) => {
+      try {
+        if (on) localStorage.setItem(INSTALLED_KEY, "1");
+        else localStorage.removeItem(INSTALLED_KEY);
+      } catch { /* storage unavailable */ }
+    };
 
     const ua = navigator.userAgent;
     const isIOS =
@@ -576,13 +584,18 @@
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
     let deferred = null;
-    let installed = false;
+    let installed = readInstalledFlag();
+    if (installed) hide();
 
     const markInstalled = () => {
       installed = true;
       deferred = null;
+      writeInstalledFlag(true);
       hide();
     };
+
+    // Already running as the installed app — remember that and offer nothing.
+    if (isStandalone()) { markInstalled(); return; }
 
     // Offer installation unless we know it's already installed. We can't rely
     // on beforeinstallprompt alone: browsers may only fire it once per profile,
@@ -605,6 +618,7 @@
       e.preventDefault();
       deferred = e;
       installed = false;
+      writeInstalledFlag(false);
       offer();
     });
 
@@ -623,7 +637,7 @@
       : Promise.resolve(false);
 
     // Reveal the button once detection settles, or shortly after if the API is
-    // slow/unavailable. Installed apps stay hidden.
+    // slow/unavailable. A previously recorded install keeps it hidden.
     let settled = false;
     detection.then((isInstalled) => {
       settled = true;
