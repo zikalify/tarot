@@ -539,145 +539,12 @@
     });
   }
 
-  /* ── Install prompt ──────────────────────────────────────────────── */
-  function initInstall() {
-    const btn = $("#install-btn");
-    const label = $("#install-label");
-    const note = $("#install-note");
-    if (!btn) return;
-
-    const displayMode = [
-      "(display-mode: standalone)",
-      "(display-mode: minimal-ui)",
-      "(display-mode: window-controls-overlay)",
-      "(display-mode: fullscreen)",
-    ].map((q) => window.matchMedia(q));
-    const isStandalone = () =>
-      window.navigator.standalone === true || displayMode.some((m) => m.matches);
-
-    const hide = () => {
-      btn.hidden = true;
-      note.hidden = true;
-      note.textContent = "";
-    };
-    const show = (text) => {
-      // Never advertise installation from inside the installed app.
-      if (isStandalone()) { hide(); return; }
-      label.textContent = text;
-      btn.hidden = false;
-    };
-
-    const INSTALLED_KEY = "solabusca.installed.v1";
-    const readInstalledFlag = () => {
-      try { return localStorage.getItem(INSTALLED_KEY) === "1"; } catch { return false; }
-    };
-    const writeInstalledFlag = (on) => {
-      try {
-        if (on) localStorage.setItem(INSTALLED_KEY, "1");
-        else localStorage.removeItem(INSTALLED_KEY);
-      } catch { /* storage unavailable */ }
-    };
-
-    const ua = navigator.userAgent;
-    const isIOS =
-      /iphone|ipad|ipod/i.test(ua) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-    let deferred = null;
-    let installed = readInstalledFlag();
-    if (installed) hide();
-
-    const markInstalled = () => {
-      installed = true;
-      deferred = null;
-      writeInstalledFlag(true);
-      hide();
-    };
-
-    // Already running as the installed app — remember that and offer nothing.
-    if (isStandalone()) { markInstalled(); return; }
-
-    // Offer installation unless we know it's already installed. We can't rely
-    // on beforeinstallprompt alone: browsers may only fire it once per profile,
-    // which would leave the button permanently hidden on later visits.
-    const offer = () => {
-      if (installed || isStandalone()) return;
-      show(isIOS ? "Install on iOS" : "Install App");
-    };
-
-    // If the app is launched or switched into standalone, it's installed — hide.
-    displayMode.forEach((m) => {
-      if (typeof m.addEventListener === "function") {
-        m.addEventListener("change", () => { if (m.matches) markInstalled(); });
-      }
-    });
-
-    // Chrome fires this when the manifest is installable *and* this particular
-    // app identity is not already installed.
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      deferred = e;
-      installed = false;
-      writeInstalledFlag(false);
-      offer();
-    });
-
-    window.addEventListener("appinstalled", markInstalled);
-
-    // Detect an existing install of this exact app identity (same origin and
-    // scope), even when the page is opened in a regular browser tab. Uses the
-    // self-referencing `related_applications` entry in the manifest.
-    const detection = typeof navigator.getInstalledRelatedApps === "function"
-      ? navigator.getInstalledRelatedApps()
-          .then((apps) => {
-            if (apps && apps.length) { markInstalled(); return true; }
-            return false;
-          })
-          .catch(() => false)
-      : Promise.resolve(false);
-
-    // Reveal the button once detection settles, or shortly after if the API is
-    // slow/unavailable. A previously recorded install keeps it hidden.
-    let settled = false;
-    detection.then((isInstalled) => {
-      settled = true;
-      if (!isInstalled) offer();
-    });
-    setTimeout(() => { if (!settled) offer(); }, 1200);
-
-    btn.addEventListener("click", async () => {
-      if (isStandalone()) { hide(); return; }
-      if (deferred) {
-        deferred.prompt();
-        const choice = await deferred.userChoice;
-        deferred = null;
-        if (choice.outcome === "accepted") markInstalled();
-        return;
-      }
-      if (isIOS) {
-        note.textContent = "Tap the Share button, then choose “Add to Home Screen”.";
-      } else {
-        // No native prompt is available. The usual cause on this domain is
-        // another installed app whose scope covers this address, which makes
-        // Chrome refuse to install a second app here.
-        note.innerHTML =
-          "Chrome isn’t offering its install prompt for this page.<br>" +
-          "That happens when another app installed from this same domain already covers this address — " +
-          "the <strong>CrMS Tracker</strong> app is installed with a scope of <code>/</code>, which claims all of " +
-          "<code>zikalify.github.io</code>.<br>" +
-          "Uninstall it in Chrome’s app settings (<code>chrome://app-settings</code>), reload this page, and install again.";
-      }
-      note.hidden = false;
-    });
-  }
-
   /* ── Boot ────────────────────────────────────────────────────────── */
   adornDecks();
   initTabs();
   initDaily();
   initThree();
   initYesNo();
-  initInstall();
 
   function checkRollovers() {
     checkDailyRollover();
@@ -689,18 +556,17 @@
   });
   setInterval(checkRollovers, 20000);
 
+  /* ── Retire the old PWA ──────────────────────────────────────────── */
+  // The app is now a plain website: drop any service worker left over from
+  // the installable version and clear its cached assets.
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
-    });
-    // When an updated service worker takes control, reload once so the new
-    // assets are used immediately (otherwise the old cache serves this load).
-    let hadController = !!navigator.serviceWorker.controller;
-    let reloading = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (!hadController || reloading) return;
-      reloading = true;
-      window.location.reload();
-    });
+    navigator.serviceWorker.getRegistrations()
+      .then((regs) => regs.forEach((reg) => reg.unregister()))
+      .catch(() => {});
+  }
+  if (window.caches) {
+    caches.keys()
+      .then((keys) => keys.forEach((key) => caches.delete(key)))
+      .catch(() => {});
   }
 })();
