@@ -1,15 +1,26 @@
 {
+  "id": "/tarot/solabusca-tarot/",
   "name": "Sola Busca Tarot",
   "short_name": "Sola Busca",
   "description": "Tarot readings drawn from the Sola Busca tarot (Venice, c. 1491) — the earliest fully extant 78-card deck, public domain.",
-  "id": "/tarot/",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#14100c",
   "theme_color": "#14100c",
   "categories": ["lifestyle", "entertainment"],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "./manifest.webmanifest",
+      "id": "https://zikalify.github.io/tarot/solabusca-tarot/"
+    }
+  ],
   "icons": [
     { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }

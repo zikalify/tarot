@@ -200,10 +200,14 @@ main { max-width: 880px; margin: 0 auto; padding: 8px 16px 60px; }
 .deck-card {
   position: absolute; inset: 0;
   border-radius: 9px;
-  background: linear-gradient(160deg, #2c1d16, #1a100c 60%, #3a2417);
-  border: 1px solid rgba(201,162,39,.5);
+  background:
+    radial-gradient(circle at 50% 38%, #6b1d1d 0%, #40110f 55%, #2a0a08 100%);
+  border: 1px solid rgba(201,162,39,.55);
   box-shadow: 0 10px 26px var(--shadow), inset 0 0 0 3px rgba(0,0,0,.35), inset 0 0 0 4px rgba(201,162,39,.28);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
+.deck-card svg { width: 78%; height: 78%; opacity: .95; }
 .deck-card:nth-child(1) { transform: translate(6px, 6px) rotate(2.2deg); }
 .deck-card:nth-child(2) { transform: translate(3px, 3px) rotate(-1.4deg); }
 .deck-card:nth-child(3) { transform: none; }

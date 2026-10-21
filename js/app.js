@@ -75,6 +75,13 @@
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  /* ── Deck (stack of face-down cards) ─────────────────────────────── */
+  // The decks in the tableau are plain divs, so give each card the same
+  // ornamental back used by the dealt cards.
+  function adornDecks() {
+    $$(".deck-card").forEach((el) => { el.innerHTML = BACK_SVG; });
+  }
+
   /* ── Card element factory ────────────────────────────────────────── */
   function buildCardEl(card, reversed) {
     const el = document.createElement("div");
@@ -539,20 +546,29 @@
     const note = $("#install-note");
     if (!btn) return;
 
-    let installed = false;
-    const hide = () => { btn.hidden = true; note.hidden = true; };
-    let markInstalled = () => { installed = true; hide(); };
-
     const displayMode = [
       "(display-mode: standalone)",
       "(display-mode: minimal-ui)",
       "(display-mode: window-controls-overlay)",
+      "(display-mode: fullscreen)",
     ].map((q) => window.matchMedia(q));
     const isStandalone = () =>
       window.navigator.standalone === true || displayMode.some((m) => m.matches);
 
-    // already running as the installed app — offer nothing
-    if (isStandalone()) return;
+    const hide = () => {
+      btn.hidden = true;
+      note.hidden = true;
+      note.textContent = "";
+    };
+    const show = (text) => {
+      // Never advertise installation from inside the installed app.
+      if (isStandalone()) { hide(); return; }
+      label.textContent = text;
+      btn.hidden = false;
+    };
+
+    // Already running as the installed app — offer nothing.
+    if (isStandalone()) { hide(); return; }
 
     const ua = navigator.userAgent;
     const isIOS =
@@ -560,55 +576,63 @@
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
     let deferred = null;
+    let installed = false;
 
-    // if the app is launched or switched into standalone, it's installed — hide
+    const markInstalled = () => {
+      installed = true;
+      deferred = null;
+      hide();
+    };
+
+    // Offer installation unless we know it's already installed. We can't rely
+    // on beforeinstallprompt alone: browsers may only fire it once per profile,
+    // which would leave the button permanently hidden on later visits.
+    const offer = () => {
+      if (installed || isStandalone()) return;
+      show(isIOS ? "Install on iOS" : "Install App");
+    };
+
+    // If the app is launched or switched into standalone, it's installed — hide.
     displayMode.forEach((m) => {
       if (typeof m.addEventListener === "function") {
         m.addEventListener("change", () => { if (m.matches) markInstalled(); });
       }
     });
 
+    // Chrome fires this when the manifest is installable *and* this particular
+    // app identity is not already installed.
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       deferred = e;
-      if (installed) return; // already installed — never re-offer
-      label.textContent = "Install App";
-      btn.hidden = false;
+      installed = false;
+      offer();
     });
 
     window.addEventListener("appinstalled", markInstalled);
 
-    // iOS never fires beforeinstallprompt and has no install API — show manual steps
-    if (isIOS) {
-      label.textContent = "Install on iOS";
-      btn.hidden = false;
-    }
+    // Detect an existing install of this exact app identity (same origin and
+    // scope), even when the page is opened in a regular browser tab. Uses the
+    // self-referencing `related_applications` entry in the manifest.
+    const detection = typeof navigator.getInstalledRelatedApps === "function"
+      ? navigator.getInstalledRelatedApps()
+          .then((apps) => {
+            if (apps && apps.length) { markInstalled(); return true; }
+            return false;
+          })
+          .catch(() => false)
+      : Promise.resolve(false);
 
-    // Scope-collision fallback: on mobile Chrome, if beforeinstallprompt never fires
-    // after ~5 s, Chrome likely thinks this is already installed due to a sibling
-    // PWA on the same origin with a broad scope. Tell the user how to fix it.
-    let fallbackTimer = null;
-    const isAndroid = /android/i.test(ua);
-    if (!isIOS && isAndroid && !isStandalone()) {
-      fallbackTimer = setTimeout(() => {
-        if (installed) return; // already installed — don't show confusing note
-        if (!deferred && btn.hidden) {
-          label.textContent = "Already installed?";
-          note.textContent = "Chrome thinks this app is already installed (another site on this domain may own the install slot). Fix: open <strong>chrome://apps</strong>, uninstall any “Sola Busca” or related apps, then reload this page.";
-          note.hidden = false;
-          btn.hidden = true;
-        }
-      }, 5000);
-    }
-
-    // clear the fallback timer once we know the app is installed
-    const baseMarkInstalled = markInstalled;
-    markInstalled = function () {
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-      baseMarkInstalled();
-    };
+    // Reveal the button once detection settles, or shortly after if the API is
+    // slow/unavailable. Installed apps stay hidden.
+    let settled = false;
+    detection.then((isInstalled) => {
+      settled = true;
+      if (!isInstalled) offer();
+    });
+    setTimeout(() => { if (!settled) offer(); }, 1200);
 
     btn.addEventListener("click", async () => {
+      if (isStandalone()) { hide(); return; }
       if (deferred) {
         deferred.prompt();
         const choice = await deferred.userChoice;
@@ -617,7 +641,7 @@
         return;
       }
       if (isIOS) {
-        note.textContent = "Tap the Share button below, then choose “Add to Home Screen”.";
+        note.textContent = "Tap the Share button, then choose “Add to Home Screen”.";
       } else {
         note.textContent = "Open your browser menu and choose “Install app” or “Add to Home screen”.";
       }
@@ -626,6 +650,7 @@
   }
 
   /* ── Boot ────────────────────────────────────────────────────────── */
+  adornDecks();
   initTabs();
   initDaily();
   initThree();
